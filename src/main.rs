@@ -26,7 +26,10 @@ fn main() {
     }
 }
 
-fn process<T>(iter: T, re: Regex) where T: BufRead {
+fn process<T>(iter: T, re: Regex)
+where
+    T: BufRead,
+{
     let stdout = io::stdout();
     let mut handle = stdout.lock();
 
