@@ -17,7 +17,9 @@ fn main() {
     for ln in stdin.lock().lines() {
         let ln = ln.expect("error while reading line");
         if re.is_match(&ln) {
-            handle.write(ln.as_bytes()).expect("error while writing line");
+            handle
+                .write(ln.as_bytes())
+                .expect("error while writing line");
             handle.write(b"\n").expect("error while writing newline");
         }
     }
