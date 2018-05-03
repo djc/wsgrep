@@ -22,22 +22,38 @@ fn main() {
     let mut hl_end = String::new();
     write!(hl_end, "{}", color::Fg(color::Reset)).unwrap();
 
+    let mut hl = false;
     for ln in stdin.lock().lines() {
         let ln = ln.expect("error while reading line");
-        let m = match re.find(&ln) {
-            Some(m) => m,
-            None => continue,
-        };
+        let mut cur = 0;
 
-        let start = m.start();
-        let end = m.end();
-        handle.write(ln[..start].as_bytes()).unwrap();
+        for m in re.find_iter(&ln) {
+            let start = m.start();
+            let end = m.end();
 
-        handle.write(&hl_start.as_bytes()).unwrap();
-        handle.write(ln[start..end].as_bytes()).unwrap();
-        handle.write(&hl_end.as_bytes()).unwrap();
+            if start > cur {
+                if hl {
+                    handle.write(&hl_end.as_bytes()).unwrap();
+                    hl = false;
+                }
+                handle.write(ln[cur..start].as_bytes()).unwrap();
+            }
 
-        handle.write(ln[end..].as_bytes()).unwrap();
+            if !hl {
+                handle.write(&hl_start.as_bytes()).unwrap();
+                hl = true;
+            }
+            handle.write(ln[start..end].as_bytes()).unwrap();
+            cur = end;
+        }
+
+        if cur < ln.len() {
+            if hl {
+                handle.write(&hl_end.as_bytes()).unwrap();
+                hl = false;
+            }
+            handle.write(ln[cur..].as_bytes()).unwrap();
+        }
         handle.write(b"\n").unwrap();
     }
 }
