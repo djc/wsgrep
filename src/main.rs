@@ -5,15 +5,28 @@ extern crate termion;
 
 use regex::Regex;
 use std::fmt::Write as FmtWrite;
-use std::io::{self, BufRead, Write};
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Write};
+use std::path::PathBuf;
 use structopt::StructOpt;
 use termion::color;
 
 fn main() {
     let config = Config::from_args();
     let re = Regex::new(&config.pattern).expect(&format!("invalid pattern {:?}", config.pattern));
+    match config.input {
+        Some(file) => {
+            let f = File::open(file).unwrap();
+            process(BufReader::new(f), re);
+        }
+        None => {
+            let stdin = io::stdin();
+            process(stdin.lock(), re);
+        }
+    }
+}
 
-    let stdin = io::stdin();
+fn process<T>(iter: T, re: Regex) where T: BufRead {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
 
@@ -23,7 +36,7 @@ fn main() {
     write!(hl_end, "{}", color::Fg(color::Reset)).unwrap();
 
     let mut hl = false;
-    for ln in stdin.lock().lines() {
+    for ln in iter.lines() {
         let ln = ln.expect("error while reading line");
         let mut cur = 0;
 
@@ -62,4 +75,6 @@ fn main() {
 #[structopt(name = "wsgrep", about = "workshop grep!")]
 struct Config {
     pattern: String,
+    #[structopt(short = "i", parse(from_os_str))]
+    input: Option<PathBuf>,
 }
