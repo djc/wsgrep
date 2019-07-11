@@ -1,8 +1,9 @@
-use regex::Regex;
 use std::fmt::Write as FmtWrite;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, LineWriter, Write};
 use std::path::PathBuf;
+
+use regex::Regex;
 use structopt::StructOpt;
 use termion::color;
 
