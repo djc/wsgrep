@@ -1,7 +1,3 @@
-extern crate regex;
-extern crate structopt;
-extern crate termion;
-
 use regex::Regex;
 use std::fmt::Write as FmtWrite;
 use std::fs::File;
