@@ -1,5 +1,4 @@
 extern crate regex;
-#[macro_use]
 extern crate structopt;
 extern crate termion;
 
@@ -11,28 +10,31 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use termion::color;
 
-fn main() {
+fn main() -> Result<(), Error> {
     let config = Config::from_args();
-    let re = Regex::new(&config.pattern).expect(&format!("invalid pattern {:?}", config.pattern));
+    let re = Regex::new(&config.pattern)?;
+    let stdout = io::stdout();
+    let out = stdout.lock();
+
     match config.input {
-        Some(file) => {
-            let f = File::open(file).unwrap();
-            process(BufReader::new(f), re);
-        }
-        None => {
-            let stdin = io::stdin();
-            process(stdin.lock(), re);
-        }
+        Some(file) => process(BufReader::new(File::open(file)?), re, out),
+        None => process(io::stdin().lock(), re, out),
     }
 }
 
-fn process<T>(iter: T, re: Regex)
-where
-    T: BufRead,
-{
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
+#[derive(Debug, StructOpt)]
+#[structopt(name = "wsgrep", about = "workshop grep!")]
+struct Config {
+    pattern: String,
+    #[structopt(short = "i", parse(from_os_str))]
+    input: Option<PathBuf>,
+}
 
+fn process<I, O>(iter: I, re: Regex, mut handle: O) -> Result<(), Error>
+where
+    I: BufRead,
+    O: Write,
+{
     let mut hl_start = String::new();
     write!(hl_start, "{}", color::Fg(color::Red)).unwrap();
     let mut hl_end = String::new();
@@ -40,7 +42,7 @@ where
 
     let mut hl = false;
     for ln in iter.lines() {
-        let ln = ln.expect("error while reading line");
+        let ln = ln?;
         let mut cur = 0;
 
         for m in re.find_iter(&ln) {
@@ -72,12 +74,24 @@ where
         }
         handle.write(b"\n").unwrap();
     }
+
+    Ok(())
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "wsgrep", about = "workshop grep!")]
-struct Config {
-    pattern: String,
-    #[structopt(short = "i", parse(from_os_str))]
-    input: Option<PathBuf>,
+#[derive(Debug)]
+enum Error {
+    Io(io::Error),
+    Re(regex::Error),
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Error {
+        Error::Io(e)
+    }
+}
+
+impl From<regex::Error> for Error {
+    fn from(e: regex::Error) -> Error {
+        Error::Re(e)
+    }
 }
