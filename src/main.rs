@@ -5,7 +5,7 @@ extern crate termion;
 use regex::Regex;
 use std::fmt::Write as FmtWrite;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, LineWriter, Write};
 use std::path::PathBuf;
 use structopt::StructOpt;
 use termion::color;
@@ -30,11 +30,12 @@ struct Config {
     input: Option<PathBuf>,
 }
 
-fn process<I, O>(iter: I, re: Regex, mut handle: O) -> Result<(), Error>
+fn process<I, O>(iter: I, re: Regex, handle: O) -> Result<(), Error>
 where
     I: BufRead,
     O: Write,
 {
+    let mut handle = LineWriter::new(handle);
     let mut hl_start = String::new();
     write!(hl_start, "{}", color::Fg(color::Red)).unwrap();
     let mut hl_end = String::new();
