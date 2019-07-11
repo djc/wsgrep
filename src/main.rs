@@ -11,11 +11,11 @@ fn main() -> Result<(), Error> {
     let config = Config::from_args();
     let re = Regex::new(&config.pattern)?;
     let stdout = io::stdout();
-    let out = stdout.lock();
+    let mut out = stdout.lock();
 
     match config.input {
-        Some(file) => process(BufReader::new(File::open(file)?), re, out),
-        None => process(io::stdin().lock(), re, out),
+        Some(file) => process(BufReader::new(File::open(file)?), re, &mut out),
+        None => process(io::stdin().lock(), re, &mut out),
     }
 }
 
@@ -27,7 +27,7 @@ struct Config {
     input: Option<PathBuf>,
 }
 
-fn process<I, O>(iter: I, re: Regex, handle: O) -> Result<(), Error>
+fn process<I, O>(iter: I, re: Regex, handle: &mut O) -> Result<(), Error>
 where
     I: BufRead,
     O: Write,
@@ -95,5 +95,28 @@ impl From<io::Error> for Error {
 impl From<regex::Error> for Error {
     fn from(e: regex::Error) -> Error {
         Error::Re(e)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple() {
+        let input = "foofds-fdsfoo".as_bytes();
+        let mut out = Vec::new();
+        let re = Regex::new("fds").unwrap();
+        process(input, re, &mut out).unwrap();
+        assert_eq!(out.as_slice(), &b"foo\x1b[38;5;1mfds\x1b[39m-\x1b[38;5;1mfds\x1b[39mfoo\n"[..]);
+    }
+
+    #[test]
+    fn no_match() {
+        let input = "foofds-fdsfoo".as_bytes();
+        let mut out = Vec::new();
+        let re = Regex::new("aw").unwrap();
+        process(input, re, &mut out).unwrap();
+        assert_eq!(out.as_slice(), &b""[..]);
     }
 }
