@@ -45,9 +45,11 @@ where
         let ln = ln?;
         let mut cur = 0;
 
+        let mut matched = false;
         for m in re.find_iter(&ln) {
             let start = m.start();
             let end = m.end();
+            matched = true;
 
             if start > cur {
                 if hl {
@@ -65,14 +67,16 @@ where
             cur = end;
         }
 
-        if cur < ln.len() {
-            if hl {
-                handle.write(&hl_end.as_bytes()).unwrap();
-                hl = false;
+        if matched {
+            if cur < ln.len() {
+                if hl {
+                    handle.write(&hl_end.as_bytes()).unwrap();
+                    hl = false;
+                }
+                handle.write(ln[cur..].as_bytes()).unwrap();
             }
-            handle.write(ln[cur..].as_bytes()).unwrap();
+            handle.write(b"\n").unwrap();
         }
-        handle.write(b"\n").unwrap();
     }
 
     Ok(())
